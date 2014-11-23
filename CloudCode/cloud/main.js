@@ -4,7 +4,13 @@ var _ = require('underscore');
 var client = require('twilio')('ACffe86e93803489cf4ead8104edd0ad06', '18e0a2805156c8822b687ed7c9438f2e');
 var twilioNumber = "12408984686";
 
-// Cloud function triggered when the above phone # receives an SMS message
+
+/* ClOUD CODE FUNCTION: receiveSMS
+ * -------------------------------
+ * Triggered when Twilio receives an SMS to the above number.
+ * Processes the message accordingly.  This function takes care
+ * of the sign up / unsubscribe process.
+ */
 Parse.Cloud.define("receiveSMS", function(request, response) {
 	Parse.Cloud.useMasterKey(); // So we can query against all users
 
@@ -16,18 +22,48 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 	query.equalTo("phoneNumber", phone);
 	query.first().then(function(matchingUser) {
 
-		// If we've not seen this number before...
+		// If we've not seen this number before at all...
 		if(!matchingUser) {
-			// TODO: Make a new user
 
+			// Create new user and ask for their name
+			var user = new Parse.User();
+			user.set("username", phone);
+			user.set("password", "Upliftio");
+			user.set("phoneNumber", phone);
+			user.set("firstName", "");
+
+			return user.signUp().then(function(user) {
+				// TODO: Configure ACL to limit access to user data
+				return sendSMS(phone, "Hello there!  Welcome to Upliftio.  What's your name?");
+			});
+
+		// If we've seen this number before, but haven't finished setup yet
+		// (AKA we don't know their name), this text must be their name
+		} else if (matchingUser && matchingUser.get("firstName") == "") {
+			matchingUser.set("firstName", request.params.Body);
+
+			return matchingUser.save().then(function(user) {
+				return sendSMS(phone, "Hi, " + user.get("firstName") + "!  Thanks for using Upliftio.  We'll send you funny, inspiring texts occasionally to motivate you.");
+			}).then(function() {
+				return sendSMS(phone, "If you want to unsubscribe (we'll miss you!), just text \"UPLIFTIO STOP\".  Thanks for using Upliftio!");
+			});
+
+		// If we've seen this number before and they want to unsubscribe...
+		} else if (matchingUser && request.params.Body == "UPLIFTIO STOP") {
+			var name = matchingUser.get("firstName");
+			return matchingUser.destroy().then(function() {
+				return sendSMS(phone, "We'll miss you " + name + "!  If you ever want to resubscribe, just text us and we'll get you re-set up.");
+			});
+
+		// Otherwise, not sure what they're sending?
 		} else {
-			// TODO: Check if they want to unsubscribe
+			return sendSMS(phone, "What was that " + matchingUser.get("firstName") + "?  To unsubscribe, text \"UPLIFTIO STOP\".");
 		}
 
-	}).then(function() {
-		response.success();
+	}).then(function(smsResponseData) {
+		response.success("Sent message to " + phone);
 	}, function(error) {
-		response.error("Error");
+		response.error("Error: " + error.message);
 	});
 });
 
@@ -41,7 +77,8 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
  * 		message: a string containing the message to send
  * 
  * Returns: a promise, rejected or resolved depending
- * 		   on the outcome of the message send.
+ * 		   on the outcome of the message send.  Promise includes
+ * 		   error object or success data.
  *
  * A promise-ified function that sends the given message
  * to the given phone number.
@@ -54,15 +91,18 @@ function sendSMS(recipient, message) {
 	    from: twilioNumber, 
 	    body: message
 	  }, function(err, responseData) { 
-	    if (err) promise.reject();
-	    else promise.resolve();
+	    if (err) promise.reject(err);
+	    else promise.resolve(responseData);
 	});
 
 	return promise;
 }
 
 
-// Background job to send messages to all users
+/* CLOUD CODE JOB: sendUpliftios
+ * ------------------------------
+ * Background job to send motivational texts to all users.
+ */
 Parse.Cloud.job("sendUpliftios", function(request, status) {
 	
 	Parse.Cloud.useMasterKey(); // So we can query against all users
