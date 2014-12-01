@@ -6,6 +6,8 @@ var _ = require('underscore');
 var twilioNumber = "+19493810852";
 
 
+
+
 /* ClOUD CODE FUNCTION: receiveSMS
  * -------------------------------
  * Triggered when Twilio receives an SMS to the above number.
@@ -72,20 +74,31 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
  *
  */
 Parse.Cloud.define('sendInspiration', function(request, response){
-	
+	// Parse.Config.get().then(function(config){
+	// 	console.log(config);
+	// 	response.success("success");
+	// });
 	Parse.Cloud.useMasterKey(); //So we can send the message to all Users
-	console.log("in sendInspiration");
-	var query = new Parse.Query(Parse.User);
-	query.count({
-		success: function(d){
-			console.log(d);
-		},
-		error: function(err){
 
-		}
+	var query = new Parse.Query(Parse.User);
+	query.find().then(function(users){
+
+		var promise = new Parse.Promise.as();
+		_.each(users, function(user){
+			promise.then(function(){
+				sendSMS(user.phoneNumber, request.message);
+			});
+		});
+
+		return promise;
+
+	}).then(function(){
+		response.success("Messages Sent!");
+	}, function(error){
+		response.error('Error sending the messages');
 	});
 
-	response.success("success");
+	
 });
 
 
@@ -105,7 +118,6 @@ Parse.Cloud.define('sendInspiration', function(request, response){
  */
 function sendSMS(recipient, message) {
 	var promise = new Parse.Promise();
-
 	client.sendSms({
 	    to:recipient, 
 	    from: twilioNumber, 
