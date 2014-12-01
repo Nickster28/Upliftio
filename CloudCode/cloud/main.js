@@ -1,5 +1,8 @@
 var _ = require('underscore');
 
+var twilioAuth = require('../secrets.json');
+
+console.log(twilioAuth);
 // Require and initialize the Twilio module with your credentials
 var client = require('twilio')('ACffe86e93803489cf4ead8104edd0ad06', '18e0a2805156c8822b687ed7c9438f2e');
 var twilioNumber = "12408984686";
