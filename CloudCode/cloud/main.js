@@ -2,7 +2,7 @@ var _ = require('underscore');
 
 
 // Require and initialize the Twilio module with your credentials
-
+var client = require('twilio')('ACc63c7b1e8b395a23925b3db61a2d4704', '13171cc8621652b8209e3d160d7b7b00');
 var twilioNumber = "+19493810852";
 
 
@@ -86,7 +86,7 @@ Parse.Cloud.define('sendInspiration', function(request, response){
 		var promise = new Parse.Promise.as();
 		_.each(users, function(user){
 			promise.then(function(){
-				sendSMS(user.phoneNumber, request.message);
+				return sendSMS(user.phoneNumber, request.message);
 			});
 		});
 
