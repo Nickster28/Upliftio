@@ -36,7 +36,7 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 				// TODO: Configure ACL to limit access to user data
 				user.setACL(new Parse.ACL(user));
 				return user.save().then(function() {
-					return sendSMS(phone, "Hello there!  Welcome to Upliftio.  What's your name?");
+					return sendSMS(phone, "Hello there!  Welcome to Upliftio.  What's your first name?");
 				});
 			});
 
@@ -60,7 +60,7 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 
 		// Otherwise, not sure what they're sending?
 		} else {
-			return sendSMS(phone, "What was that " + matchingUser.get("firstName") + "?  To unsubscribe, text \"UPLIFTIO STOP\".");
+			return sendSMS(phone, "What was that, " + matchingUser.get("firstName") + "?  To unsubscribe, text \"UPLIFTIO STOP\".");
 		}
 
 	}).then(function(smsResponseData) {
@@ -90,7 +90,10 @@ Parse.Cloud.define('sendInspiration', function(request, response){
 		var promise = new Parse.Promise.as();
 		_.each(users, function(user){
 			promise = promise.then(function(){
-				return sendSMS(user.get("phoneNumber"), "Hey " + user.get("firstName") + ", " + request.params.message);
+				firstName = user.get("firstName");
+				if (firstName == "") firstName = "awesome person"
+				console.log(firstName);
+				//return sendSMS(user.get("phoneNumber"), "Hey " + firstName + ", " + request.params.message);
 			});
 		});
 
