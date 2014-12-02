@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var client = require('twilio')('ACc63c7b1e8b395a23925b3db61a2d4704', '13171cc8621652b8209e3d160d7b7b00');
 
 // Require and initialize the Twilio module with your credentials
 
@@ -92,7 +91,7 @@ Parse.Cloud.define('sendInspiration', function(request, response){
 		_.each(users, function(user){
 			promise = promise.then(function(){
 				firstName = user.get("firstName");
-				if (firstName == "") firstName = "awesome person"
+				if (firstName == "") firstName = "awesome person";
 				return sendSMS(user.get("phoneNumber"), "Hey " + firstName + ", " + request.params.message);
 			});
 		});
