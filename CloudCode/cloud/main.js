@@ -70,15 +70,19 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 	});
 });
 
-/* FUNCTION: sendInspiration
- *
+/* CLOUD CODE FUNCTION: sendInspiration
+ * ------------------------------------
+ * Triggered when someone sends a message on the front end at upliftio.parseapp.com.
+ * Adds "Hey {{name}}," to the beginning and sends an inspirational message
+ * 
  */
 Parse.Cloud.define('sendInspiration', function(request, response){
-	// Parse.Config.get().then(function(config){
-	// 	console.log(config);
-	// 	response.success("success");
-	// });
+
 	Parse.Cloud.useMasterKey(); //So we can send the message to all Users
+
+	if(request.params.password != "elephantsrule"){
+		response.error('wrong password brah.');
+	}
 
 	var query = new Parse.Query(Parse.User);
 	query.find().then(function(users){
@@ -86,7 +90,7 @@ Parse.Cloud.define('sendInspiration', function(request, response){
 		var promise = new Parse.Promise.as();
 		_.each(users, function(user){
 			promise = promise.then(function(){
-				return sendSMS(user.get("phoneNumber"), request.params.message);
+				return sendSMS(user.get("phoneNumber"), "Hey " + user.get("firstName") + ", " + request.params.message);
 			});
 		});
 

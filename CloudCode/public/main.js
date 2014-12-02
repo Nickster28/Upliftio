@@ -10,11 +10,13 @@ var initializePage = function(){
 	$("button").click(function(e){
 		e.preventDefault();
 		var message = $("#message").val();
+		var password = $("#password").val();
 		$("#message").val("");
+		$("#password").val("");
 		var from = $(this).text();
 		console.log(from);
 		console.log(message);
-		Parse.Cloud.run('sendInspiration', {message: message}, {
+		Parse.Cloud.run('sendInspiration', {message: message, password: password}, {
 			success: function(data){
 
 			},
