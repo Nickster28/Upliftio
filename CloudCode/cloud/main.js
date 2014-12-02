@@ -1,11 +1,8 @@
 var _ = require('underscore');
 
-
 // Require and initialize the Twilio module with your credentials
 
 var twilioNumber = "+19493810852";
-
-
 
 
 /* ClOUD CODE FUNCTION: receiveSMS
@@ -33,12 +30,14 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 			user.set("username", phone);
 			user.set("password", "Upliftio");
 			user.set("phoneNumber", phone);
-			user.set("firstName", "");
-			user.setACL(new Parse.ACL(user));
+			user.set("firstName", "");			
 
 			return user.signUp().then(function(user) {
 				// TODO: Configure ACL to limit access to user data
-				return sendSMS(phone, "Hello there!  Welcome to Upliftio.  What's your name?");
+				user.setACL(new Parse.ACL(user));
+				return user.save().then(function() {
+					return sendSMS(phone, "Hello there!  Welcome to Upliftio.  What's your name?");
+				});
 			});
 
 		// If we've seen this number before, but haven't finished setup yet
@@ -47,7 +46,7 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 			matchingUser.set("firstName", request.params.Body);
 
 			return matchingUser.save().then(function(user) {
-				return sendSMS(phone, "Hi, " + user.get("firstName") + "!  Thanks for using Upliftio.  We'll send you funny, inspiring texts occasionally to motivate you.");
+				return sendSMS(phone, "Hi " + user.get("firstName") + "!  Thanks for using Upliftio.  We'll send you funny, inspiring texts occasionally to keep you motivated.");
 			}).then(function() {
 				return sendSMS(phone, "If you want to unsubscribe (we'll miss you!), just text \"UPLIFTIO STOP\".  Thanks for using Upliftio!");
 			});
