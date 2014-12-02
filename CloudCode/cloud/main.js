@@ -34,6 +34,7 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 			user.set("password", "Upliftio");
 			user.set("phoneNumber", phone);
 			user.set("firstName", "");
+			user.setACL(new Parse.ACL(user));
 
 			return user.signUp().then(function(user) {
 				// TODO: Configure ACL to limit access to user data
