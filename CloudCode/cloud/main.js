@@ -85,8 +85,8 @@ Parse.Cloud.define('sendInspiration', function(request, response){
 
 		var promise = new Parse.Promise.as();
 		_.each(users, function(user){
-			promise.then(function(){
-				sendSMS(user.phoneNumber, request.message);
+			promise = promise.then(function(){
+				return sendSMS(user.phoneNumber, request.params.message);
 			});
 		});
 
