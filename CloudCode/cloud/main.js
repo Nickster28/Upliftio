@@ -20,6 +20,7 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 	// Search for this number in our user list
 	var query = new Parse.Query(Parse.User);
 	query.equalTo("phoneNumber", phone);
+	query.limit(1000);
 	query.first().then(function(matchingUser) {
 
 		// If we've not seen this number before at all...
@@ -33,7 +34,6 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 			user.set("firstName", "");			
 
 			return user.signUp().then(function(user) {
-				// TODO: Configure ACL to limit access to user data
 				user.setACL(new Parse.ACL(user));
 				return user.save().then(function() {
 					return sendSMS(phone, "Hi there! Welcome to Upliftio. We'll send you funny, inspiring texts occasionally to motivate you. What's your first name?");
@@ -50,7 +50,7 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 			});
 
 		// If we've seen this number before and they want to unsubscribe...
-		} else if (matchingUser && request.params.Body == "UPLIFTIO STOP") {
+		} else if (matchingUser && request.params.Body.indexOf("UPLIFTIO STOP") != -1) {
 			var name = matchingUser.get("firstName");
 			return matchingUser.destroy().then(function() {
 				return sendSMS(phone, "We'll miss you " + name + "!  If you ever want to resubscribe, just text us and we'll get you re-set up.");
@@ -68,10 +68,11 @@ Parse.Cloud.define("receiveSMS", function(request, response) {
 	});
 });
 
+
 /* CLOUD CODE FUNCTION: sendInspiration
  * ------------------------------------
  * Triggered when someone sends a message on the front end at upliftio.parseapp.com.
- * Adds "Hey {{name}}," to the beginning and sends an inspirational message
+ * Adds "Hey {{name}}," to the beginning and sends an inspirational message.
  * 
  */
 Parse.Cloud.define('sendInspiration', function(request, response){
@@ -82,15 +83,30 @@ Parse.Cloud.define('sendInspiration', function(request, response){
 		response.error('wrong password brah.');
 	}
 
+	// Get all the users
 	var query = new Parse.Query(Parse.User);
-	query.find().then(function(users){
+	query.limit(1000);
+	query.find().then(function(users) {
 
-		var promise = new Parse.Promise.as();
+		var promise = Parse.Promise.as();
+
+		// Send the message to each user synchronously
 		_.each(users, function(user){
+
 			promise = promise.then(function(){
+
+				// Get their first name (or use "awesome person" if they never gave one)
 				firstName = user.get("firstName");
 				if (firstName == "") firstName = "awesome person";
-				return sendSMS(user.get("phoneNumber"), "Hey " + firstName + ", " + request.params.message);
+
+				// Send them the SMS with an individual error handler for this
+				// message so if it fails it doesn't prevent all the others
+				// from being sent (like "catching" the error here and telling
+				// the process to continue anyway).
+				return sendSMS(user.get("phoneNumber"), "Hey " + firstName + ", " + request.params.message).then(function() {}, function(error) {
+					console.log("Error sending message to " + firstName + ": " + error.message);
+					return Parse.Promise.as();
+				});
 			});
 		});
 
@@ -99,7 +115,7 @@ Parse.Cloud.define('sendInspiration', function(request, response){
 	}).then(function(){
 		response.success("Messages Sent!");
 	}, function(error){
-		response.error('Error sending the messages');
+		response.error('Error sending the messages: ' + error.message);
 	});
 
 	
@@ -130,37 +146,5 @@ function sendSMS(recipient, message) {
 	    if (err) promise.reject(err);
 	    else promise.resolve(responseData);
 	});
-
 	return promise;
 }
-
-
-/* CLOUD CODE JOB: sendUpliftios
- * ------------------------------
- * Background job to send motivational texts to all users.
- */
-Parse.Cloud.job("sendUpliftios", function(request, status) {
-	
-	Parse.Cloud.useMasterKey(); // So we can query against all users
-
-	var query = Parse.Query(Parse.User);
-	query.find().then(function(users) {
-		
-		// Send a message to all users
-		var promise = new Parse.Promise.as();
-		_.each(users, function(user) {
-
-			promise = promise.then(function() {
-				// TODO: Send message to "user"
-			});
-		});
-
-		return promise;
-
-
-	}).then(function() {
-		status.success("Sent messages!");
-	}, function(error) {
-		status.error("Could not send messages.");
-	});
-});
